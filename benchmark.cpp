@@ -47,14 +47,14 @@ template <int I>
 struct V
 {
   type<I> i;
-  operator type<I>() const { return i;};
+  operator type<I>() const { return i;}
 };
 
 template <std::size_t ... I>
 auto populate(std::index_sequence<I...>)
 {
   std::vector<std::variant<V<I>...>> v;
-  for (int i = 0; i < 5000/sizeof...(I); ++i)
+  for (unsigned i = 0; i < 5000U/sizeof...(I); ++i)
   {
     (v.push_back(V<I>{(I&1) == 1}),...);
     (v.push_back(V<I>{(I&1) == 0}),...);
@@ -91,27 +91,27 @@ void std_visit(benchmark::State& state)
     benchmark::DoNotOptimize(sum);
   }
 }
-void rollbear_visit_1(benchmark::State& state) { rollbear_visit<1>(state);}
-void rollbear_visit_2(benchmark::State& state) { rollbear_visit<2>(state);}
-void rollbear_visit_3(benchmark::State& state) { rollbear_visit<3>(state);}
-void rollbear_visit_5(benchmark::State& state) { rollbear_visit<5>(state);}
-void rollbear_visit_8(benchmark::State& state) { rollbear_visit<8>(state);}
-void rollbear_visit_13(benchmark::State& state) { rollbear_visit<13>(state);}
-void rollbear_visit_21(benchmark::State& state) { rollbear_visit<21>(state);}
-void rollbear_visit_34(benchmark::State& state) { rollbear_visit<34>(state);}
-void rollbear_visit_55(benchmark::State& state) { rollbear_visit<55>(state);}
-void rollbear_visit_89(benchmark::State& state) { rollbear_visit<89>(state);}
+static void rollbear_visit_1(benchmark::State& state) { rollbear_visit<1>(state);}
+static void rollbear_visit_2(benchmark::State& state) { rollbear_visit<2>(state);}
+static void rollbear_visit_3(benchmark::State& state) { rollbear_visit<3>(state);}
+static void rollbear_visit_5(benchmark::State& state) { rollbear_visit<5>(state);}
+static void rollbear_visit_8(benchmark::State& state) { rollbear_visit<8>(state);}
+static void rollbear_visit_13(benchmark::State& state) { rollbear_visit<13>(state);}
+static void rollbear_visit_21(benchmark::State& state) { rollbear_visit<21>(state);}
+static void rollbear_visit_34(benchmark::State& state) { rollbear_visit<34>(state);}
+static void rollbear_visit_55(benchmark::State& state) { rollbear_visit<55>(state);}
+static void rollbear_visit_89(benchmark::State& state) { rollbear_visit<89>(state);}
 
-void std_visit_1(benchmark::State& state) { std_visit<1>(state);}
-void std_visit_2(benchmark::State& state) { std_visit<2>(state);}
-void std_visit_3(benchmark::State& state) { std_visit<3>(state);}
-void std_visit_5(benchmark::State& state) { std_visit<5>(state);}
-void std_visit_8(benchmark::State& state) { std_visit<8>(state);}
-void std_visit_13(benchmark::State& state) { std_visit<13>(state);}
-void std_visit_21(benchmark::State& state) { std_visit<21>(state);}
-void std_visit_34(benchmark::State& state) { std_visit<34>(state);}
-void std_visit_55(benchmark::State& state) { std_visit<55>(state);}
-void std_visit_89(benchmark::State& state) { std_visit<89>(state);}
+static void std_visit_1(benchmark::State& state) { std_visit<1>(state);}
+static void std_visit_2(benchmark::State& state) { std_visit<2>(state);}
+static void std_visit_3(benchmark::State& state) { std_visit<3>(state);}
+static void std_visit_5(benchmark::State& state) { std_visit<5>(state);}
+static void std_visit_8(benchmark::State& state) { std_visit<8>(state);}
+static void std_visit_13(benchmark::State& state) { std_visit<13>(state);}
+static void std_visit_21(benchmark::State& state) { std_visit<21>(state);}
+static void std_visit_34(benchmark::State& state) { std_visit<34>(state);}
+static void std_visit_55(benchmark::State& state) { std_visit<55>(state);}
+static void std_visit_89(benchmark::State& state) { std_visit<89>(state);}
 
 // Register the function as a benchmark
 BENCHMARK(rollbear_visit_1);

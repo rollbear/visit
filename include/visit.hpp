@@ -96,21 +96,6 @@ namespace rollbear
     template <typename T>
     using remove_cv_ref_t = std::remove_const_t<std::remove_reference_t<T>>;
 
-    template <typename>
-    struct nothrow_constructible;
-
-    template <typename ... Ts>
-    struct nothrow_constructible<std::variant<Ts...>>
-    {
-      static constexpr bool value =
-        std::conjunction_v<std::is_nothrow_move_constructible<Ts>...> &&
-        std::conjunction_v<std::is_nothrow_copy_constructible<Ts>...>;
-    };
-
-
-    template <typename ... Vs>
-    inline constexpr bool infallible =
-      (nothrow_constructible<remove_cv_ref_t<Vs>>::value && ...);
 
     template<
       std::size_t ... Is,
@@ -128,18 +113,13 @@ namespace rollbear
       Vs &&... vs)
     {
       constexpr auto n = next_seq(i, m);
-      if (sum(n) > 0) {
+      if constexpr (sum(n) == 0) {
+        return f(std::get<Is>(std::forward<Vs>(vs))...);
+      } else {
         if (std::tuple(vs.index()...) == std::tuple(Is...)) {
           return f(forward_like<Vs>(*std::get_if<Is>(&vs))...);
         }
         return visit(n, m, std::forward<F>(f), std::forward<Vs>(vs)...);
-      } else {
-        if constexpr (infallible<Vs...>)
-        {
-          return f(forward_like<Vs>(*std::get_if<Is>(&vs))...);
-        } else {
-          return f(std::get<Is>(std::forward<Vs>(vs))...);
-        }
       }
     }
 
@@ -149,11 +129,16 @@ namespace rollbear
   template <typename F, typename ... Vs>
   inline auto visit(F&& f, Vs&& ... vs)
   {
-    return detail::visit(
-      std::index_sequence<detail::zero<Vs>...>{},
-      std::index_sequence<std::variant_size_v<detail::remove_cv_ref_t<Vs>>...>{},
-      std::forward<F>(f),
-      std::forward<Vs>(vs)...);
+    if constexpr (((std::variant_size_v<detail::remove_cv_ref_t<Vs>> == 1) && ...))
+    {
+      return f(detail::forward_like<Vs>(*std::get_if<0>(&vs))...);
+    } else {
+      return detail::visit(
+        std::index_sequence<detail::zero<Vs>...>{},
+        std::index_sequence<std::variant_size_v<detail::remove_cv_ref_t<Vs>>...>{},
+        std::forward<F>(f),
+        std::forward<Vs>(vs)...);
+    }
   }
 
 }

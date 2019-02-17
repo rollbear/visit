@@ -135,3 +135,52 @@ SCENARIO("multi variant visit")
     }
   }
 }
+
+SCENARIO("mixed types visit")
+{
+  GIVEN("two variants, a unique_ptr and a visitor") {
+    using std::to_string;
+    using up = std::unique_ptr<int>;
+    overload visitor{
+      [](int&& i, up p, std::string&& s) {
+        return to_string(i) + to_string(*p) + s;
+      },
+      [](std::string&& s, up p, int&& i) {
+        return s + to_string(*p) + to_string(i);
+      },
+      [](std::string&& s, up p, std::string&& s2) {
+        return s + to_string(*p) + s2;
+      },
+      [](int i1, up p, int i2) {
+        return to_string(i1) + to_string(*p) + to_string(i2);
+      }
+    };
+    using V = std::variant<int, std::string>;
+
+    WHEN("visited with the variants and unique_ptr") {
+      auto r1 = rollbear::visit(visitor, V{1}, std::make_unique<int>(3), V{2});
+      std::string s("s");
+      auto r2 = rollbear::visit(visitor, V{s}, std::make_unique<int>(3), V{0});
+      THEN(
+        "they are perfect forwarded to the visitor") {
+        REQUIRE(r1 == "132");
+        REQUIRE(r2 == "s30");
+      }
+    }
+    AND_WHEN("either variant is valueless by exception")
+    {
+      V v{0};
+      try {
+        v.emplace<int>(evil{});
+      }
+      catch (...)
+      {}
+      THEN("visit throws bad_variant_access")
+      {
+        REQUIRE_THROWS_AS(rollbear::visit(visitor, V{3}, nullptr, std::move(v)), std::bad_variant_access);
+        REQUIRE_THROWS_AS(rollbear::visit(visitor, std::move(v), nullptr, V{3}), std::bad_variant_access);
+      }
+    }
+  }
+}
+

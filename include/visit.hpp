@@ -20,6 +20,27 @@ namespace rollbear
 {
   namespace detail {
 
+    template <typename ... Ts>
+    void variant_access_(const std::variant<Ts...>*);
+
+    template <typename T>
+    using variant_access = decltype(variant_access_(static_cast<std::decay_t<T>*>(nullptr)));
+
+    template <template <typename ...> class, typename = void, typename ...>
+    struct detected : std::false_type {};
+
+    template <template <typename ...> class D, typename ... Ts>
+    struct detected<D, std::void_t<D<Ts...>>, Ts...> : std::true_type {};
+
+    template <template <typename ...> class D, typename ... Ts>
+      using is_detected = typename detected<D, void, Ts...>::type;
+
+    template <template <typename ...> class D, typename ... Ts>
+    constexpr bool is_detected_v = is_detected<D, Ts...>::value;
+
+    template <typename T>
+    constexpr bool is_variant_v = is_detected_v<variant_access, T>;
+
     template<std::size_t I, std::size_t ... Is>
     constexpr
     std::index_sequence<I, Is...>
@@ -97,6 +118,58 @@ namespace rollbear
     using remove_cv_ref_t = std::remove_const_t<std::remove_reference_t<T>>;
 
 
+    template <std::size_t I, typename T>
+    decltype(auto) get(T&& t)
+    {
+      if constexpr (is_variant_v<T>)
+      {
+        return std::get<I>(std::forward<T>(t));
+      }
+      else
+      {
+        static_assert(I == 0);
+        return std::forward<T>(t);
+      }
+    }
+
+    template <std::size_t I, typename T>
+    auto get_if(T* t)
+    {
+      if constexpr (is_variant_v<T>)
+      {
+        return std::get_if<I>(t);
+      }
+      else {
+        static_assert(I == 0);
+        return t;
+      }
+    }
+
+    template <typename V>
+    constexpr size_t variant_size()
+    {
+      if constexpr (is_variant_v<V>)
+      {
+        return std::variant_size_v<remove_cv_ref_t<V>>;
+      }
+      else
+      {
+        return 1;
+      }
+    }
+
+    template <typename V>
+    constexpr size_t index(const V& v)
+    {
+      if constexpr (is_variant_v<V>)
+      {
+        return v.index();
+      }
+      else
+      {
+        return 0;
+      }
+    }
     template<
       std::size_t ... Is,
       std::size_t ... Ms,
@@ -114,10 +187,10 @@ namespace rollbear
     {
       constexpr auto n = next_seq(i, m);
       if constexpr (sum(n) == 0) {
-        return f(std::get<Is>(std::forward<Vs>(vs))...);
+        return f(get<Is>(std::forward<Vs>(vs))...);
       } else {
-        if (std::tuple(vs.index()...) == std::tuple(Is...)) {
-          return f(forward_like<Vs>(*std::get_if<Is>(&vs))...);
+        if (std::tuple(detail::index(vs)...) == std::tuple(Is...)) {
+          return f(forward_like<Vs>(*get_if<Is>(&vs))...);
         }
         return visit(n, m, std::forward<F>(f), std::forward<Vs>(vs)...);
       }
@@ -129,13 +202,13 @@ namespace rollbear
   template <typename F, typename ... Vs>
   inline auto visit(F&& f, Vs&& ... vs)
   {
-    if constexpr (((std::variant_size_v<detail::remove_cv_ref_t<Vs>> == 1) && ...))
+    if constexpr (((detail::variant_size<Vs>() == 1) && ...))
     {
-      return f(detail::forward_like<Vs>(*std::get_if<0>(&vs))...);
+      return f(detail::forward_like<Vs>(*detail::get_if<0>(&vs))...);
     } else {
       return detail::visit(
         std::index_sequence<detail::zero<Vs>...>{},
-        std::index_sequence<std::variant_size_v<detail::remove_cv_ref_t<Vs>>...>{},
+        std::index_sequence<detail::variant_size<Vs>()...>{},
         std::forward<F>(f),
         std::forward<Vs>(vs)...);
     }

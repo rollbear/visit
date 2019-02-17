@@ -34,7 +34,7 @@ struct visitor {
   auto operator()(string s1, P p, string s2) const { return s1 + to_string(*p) + s2; }
 };
 
-auto r = rollbear::visit(visitor, V{1}, std::make_unique<int>(3), S{string{"foo"}});
+auto r = rollbear::visit(visitor{}, V{1}, std::make_unique<int>(3), S{string{"foo"}});
 assert(r == "13foo");
 ```
 

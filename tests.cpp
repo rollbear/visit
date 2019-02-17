@@ -22,14 +22,9 @@ struct overload : F...
 template <typename ...F>
 overload(F...) -> overload<F...>;
 
-struct awful
+struct evil
 {
-  awful() = default;
-  awful(awful&&)
-  {
-    throw 0;
-  }
-  awful& operator=(const awful&) = default;
+  operator int() const { throw 1;}
 };
 
 SCENARIO("single variant visit")
@@ -42,10 +37,9 @@ SCENARIO("single variant visit")
     overload visitor{
       [&](int v)                -> int { ++int_visits; return v;},
       [&](const std::string& s) -> int { ++string_visits; return s.length();},
-      [&](void*)                -> int { ++ptr_visits; return 0;},
-      [&](const auto&)          -> int { abort(); }
+      [&](void*)                -> int { ++ptr_visits; return 0;}
     };
-    std::variant<int, std::string, void*, awful> v{3};
+    std::variant<int, std::string, void*> v{3};
     WHEN("visited with an int")
     {
       auto r = rollbear::visit(visitor, v);
@@ -78,7 +72,7 @@ SCENARIO("single variant visit")
     AND_WHEN("visited when empty with exception")
     {
       try {
-        v = awful{};
+        v.emplace<int>(evil{});
       }
       catch (...)
       {
@@ -95,11 +89,10 @@ SCENARIO("multi variant visit")
 {
   GIVEN("two variants and a visitor")
   {
-    using V =  std::variant<int, std::string, awful>;
+    using V =  std::variant<int, std::string>;
 
     using std::to_string;
     overload visitor{
-      [](const auto&,const auto&)       { return std::string{};},
       [](int i, int j)                  { return to_string(i) + to_string(j);},
       [](int i, std::string s)          { return to_string(i) + s;},
       [](std::string s, int i)          { return s + to_string(i);},
@@ -129,7 +122,7 @@ SCENARIO("multi variant visit")
       V v1{3};
       V v2{4};
       try {
-        v1 = awful{};
+        v1.emplace<int>(evil{});
       }
       catch (...)
       {

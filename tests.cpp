@@ -134,6 +134,42 @@ SCENARIO("multi variant visit")
       }
     }
   }
+  AND_GIVEN("a type inherited from variant, a variant and a visitor")
+  {
+    struct S : public std::variant<int, std::string>
+    {
+      using std::variant<int,std::string>::variant;
+    };
+    using V =  std::variant<int, std::string>;
+
+    using std::to_string;
+    overload visitor{
+      [](int i, int j)                  { return to_string(i) + to_string(j);},
+      [](int i, std::string s)          { return to_string(i) + s;},
+      [](std::string s, int i)          { return s + to_string(i);},
+      [](std::string s1,std::string s2) { return s1+s2;}
+    };
+    WHEN("visited with values")
+    {
+      V v{3};
+      S s{std::string("foo")};
+      auto r1 = rollbear::visit(visitor, v,s);
+      auto r2 = rollbear::visit(visitor, s, v);
+      v = std::string("bar");
+      auto r3 = rollbear::visit(visitor, v,s);
+      v = 3;
+      s = 4;
+      auto r4 = rollbear::visit(visitor, v,s);
+      THEN("the return value comes from the visitor of the value pair")
+      {
+        REQUIRE(r1 == "3foo");
+        REQUIRE(r2 == "foo3");
+        REQUIRE(r3 == "barfoo");
+        REQUIRE(r4 == "34");
+      }
+    }
+
+  }
 }
 
 SCENARIO("mixed types visit")
@@ -184,3 +220,8 @@ SCENARIO("mixed types visit")
   }
 }
 
+
+SCENARIO("type derived from variant")
+{
+
+}

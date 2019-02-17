@@ -21,7 +21,7 @@ namespace rollbear
   namespace detail {
 
     template <typename ... Ts>
-    void variant_access_(const std::variant<Ts...>*);
+    std::variant<Ts...> variant_access_(const std::variant<Ts...>*);
 
     template <typename T>
     using variant_access = decltype(variant_access_(static_cast<std::decay_t<T>*>(nullptr)));
@@ -150,7 +150,7 @@ namespace rollbear
     {
       if constexpr (is_variant_v<V>)
       {
-        return std::variant_size_v<remove_cv_ref_t<V>>;
+        return std::variant_size_v<variant_access<V>>;
       }
       else
       {

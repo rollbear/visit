@@ -22,9 +22,22 @@ struct overload : F...
 template <typename ...F>
 overload(F...) -> overload<F...>;
 
+template <typename T>
+struct dubious
+{
+  dubious(T t) : t(t) {}
+  dubious(dubious&& r) noexcept(false) : t(std::move(r.t)) {}
+  dubious(const dubious& r) noexcept(false) : t(r.t) {}
+  dubious& operator=(const dubious&) = default;
+  operator const T&() const { return t; }
+  operator T&&() && { return std::move(t); }
+  T t;
+};
+
 struct evil
 {
-  operator int() const { throw 1;}
+  template <typename T>
+  operator dubious<T>() const { throw 1;}
 };
 
 SCENARIO("single variant visit")
@@ -39,7 +52,7 @@ SCENARIO("single variant visit")
       [&](const std::string& s) -> int { ++string_visits; return s.length();},
       [&](void*)                -> int { ++ptr_visits; return 0;}
     };
-    std::variant<int, std::string, void*> v{3};
+    std::variant<dubious<int>, dubious<std::string>, dubious<void*>> v{3};
     WHEN("visited with an int")
     {
       auto r = rollbear::visit(visitor, v);
@@ -72,7 +85,7 @@ SCENARIO("single variant visit")
     AND_WHEN("visited when empty with exception")
     {
       try {
-        v.emplace<int>(evil{});
+        v.emplace<dubious<int>>(evil{});
       }
       catch (...)
       {
@@ -89,7 +102,7 @@ SCENARIO("multi variant visit")
 {
   GIVEN("two variants and a visitor")
   {
-    using V =  std::variant<int, std::string>;
+    using V =  std::variant<dubious<int>, dubious<std::string>>;
 
     using std::to_string;
     overload visitor{
@@ -122,7 +135,7 @@ SCENARIO("multi variant visit")
       V v1{3};
       V v2{4};
       try {
-        v1.emplace<int>(evil{});
+        v1.emplace<dubious<int>>(evil{});
       }
       catch (...)
       {
@@ -191,7 +204,7 @@ SCENARIO("mixed types visit")
         return to_string(i1) + to_string(*p) + to_string(i2);
       }
     };
-    using V = std::variant<int, std::string>;
+    using V = std::variant<dubious<int>, dubious<std::string>>;
 
     WHEN("visited with the variants and unique_ptr") {
       auto r1 = rollbear::visit(visitor, V{1}, std::make_unique<int>(3), V{2});
@@ -207,7 +220,7 @@ SCENARIO("mixed types visit")
     {
       V v{0};
       try {
-        v.emplace<int>(evil{});
+        v.emplace<dubious<int>>(evil{});
       }
       catch (...)
       {}
@@ -218,10 +231,4 @@ SCENARIO("mixed types visit")
       }
     }
   }
-}
-
-
-SCENARIO("type derived from variant")
-{
-
 }

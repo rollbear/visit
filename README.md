@@ -39,3 +39,14 @@ assert(r == "13foo");
 ```
 
 See the test sources for more details.
+
+A note on performance:
+
+The overheads mentioned are tiny, and often other performance factors wil dominate. With that said,
+the included benchmark program shows that, on my machines, `rollbear::visit` is consistently faster
+than `std::visit` with clang compilers, regardless of whether using `libc++` or `libstdc++`.
+With gcc compilers it varies with version, and `std::visit` is typically faster for large variants
+with many members, while `rollbear::visit` is typically faster for variants with 8 or fewer members.
+Measure to find out for your tools and your hardware.
+
+See also Michael Park's variant with its visit. https://github.com/mpark/variant
